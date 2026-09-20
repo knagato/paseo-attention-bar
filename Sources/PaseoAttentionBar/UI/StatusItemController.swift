@@ -51,7 +51,13 @@ final class StatusItemController: NSObject {
             },
             onQuit: { NSApp.terminate(nil) }
         )
-        popover.contentViewController = NSHostingController(rootView: root)
+        let hosting = NSHostingController(rootView: root)
+        // 既定の sizingOptions では SwiftUI 側の内容が増減しても popover の contentSize が
+        // 追従せず、中身だけが広がって両端が切れる。preferredContentSize を追跡させると
+        // NSPopover がそれを見てウィンドウを作り直す。
+        hosting.sizingOptions = [.preferredContentSize]
+        popover.contentSize = NSSize(width: PopoverView.width, height: 200)
+        popover.contentViewController = hosting
     }
 
     @objc private func handleClick() {

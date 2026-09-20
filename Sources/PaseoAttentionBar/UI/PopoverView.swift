@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct PopoverView: View {
+    static let width: CGFloat = 380
+
     @ObservedObject var client: PaseoClient
 
     var onOpenAgent: (String) -> Void
@@ -37,7 +39,9 @@ struct PopoverView: View {
             Divider()
             footer
         }
-        .frame(width: 380)
+        .frame(width: PopoverView.width)
+        // 子ビューが幅を要求しても、ここで切って popover のサイズに影響させない
+        .clipped()
     }
 
     // MARK: - パーツ
@@ -160,6 +164,7 @@ private struct AgentRow: View {
                     .font(.system(size: 12))
                     .lineLimit(2)
                     .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 HStack(spacing: 4) {
                     Text(agent.displayProject)
                         .lineLimit(1)
@@ -170,11 +175,14 @@ private struct AgentRow: View {
                         Text("·")
                         Text(Formatting.reasonLabel(agent))
                             .lineLimit(1)
+                            .truncationMode(.tail)
                     }
                 }
                 .font(.system(size: 10.5))
                 .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             Spacer(minLength: 0)
             if showMarkRead && hovering {
                 Button {
