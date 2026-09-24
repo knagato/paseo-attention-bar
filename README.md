@@ -1,110 +1,173 @@
 # PaseoAttentionBar
 
-ローカルの [Paseo](https://paseo.sh) デーモンで、**タスクが完了してユーザーの確認待ちになっている
-エージェント**を macOS のメニューバーに常駐表示するアプリ。
+[Paseo](https://paseo.sh) のエージェントのうち、**あなたの対応を待っているもの**を
+macOS のメニューバーに件数で表示する常駐アプリです。
 
 ```
 ▣ ?1 !1 ✓3 ▶2
 ```
 
+エージェントに作業を任せて別のことをしていても、「質問が来ている」「終わって確認待ち」
+「エラーで止まった」がメニューバーを見るだけで分かります。クリックすればそのエージェントを
+Paseo Desktop で直接開けます。
+
+> [!NOTE]
+> 個人が作った非公式ツールです。Paseo の開発元とは関係ありません。
+
+## 表示の見方
+
 | 表示 | 意味 | 色 |
 | --- | --- | --- |
-| `?n` | 入力待ち（権限確認・質問） | 橙 |
+| `?n` | 入力待ち（権限の確認・質問） | 橙 |
 | `!n` | エラーで止まった | 赤 |
-| `✓n` | **完了・確認待ち**（Desktop でまだ開いていない） | 通常色 |
-| `▶n` | 実行中（右クリックメニューで非表示にできる） | 小さめ |
+| `✓n` | 完了して確認待ち（Desktop でまだ開いていない） | 通常 |
+| `▶n` | 実行中（非表示にできる） | 小さめ |
 | `—` | デーモンに接続できていない | |
 
-- 左クリックでポップオーバー。行をクリックすると **Paseo Desktop でそのエージェントを開く**
-  （`paseo://h/<serverId>/agent/<agentId>` の deep link。開くと Desktop 側が既読にするので一覧から消える）。
-- 行にホバーすると ✓ ボタンが出る。押すと開かずに既読にする（`clear_agent_attention`）。
-- 右クリックで「Paseo を開く」「すべて既読」「再接続」「ログイン時に起動」「接続先の変更」。
+## 使い方
 
-## しくみ
+- **左クリック**: 一覧をポップオーバーで表示します。
+  - 行をクリックすると、そのエージェントを Paseo Desktop で開きます。開いたものは既読になり、一覧から消えます。
+  - 行にマウスを重ねると ✓ ボタンが出ます。押すと、開かずに既読にします。
+- **右クリック**: 次のメニューを表示します。
+  - Paseo を開く
+  - すべて既読にする
+  - 再接続
+  - 実行中の件数も表示（`▶n` の表示・非表示）
+  - 接続先を変更
+  - 終了
 
-Paseo デーモンには「要確認（attention）」の概念が組み込まれている。エージェントが 1 ターン終えると
-`requiresAttention: true, attentionReason: "finished"` が付き、Desktop でそのエージェントを開くと
-クリアされる。このアプリはその状態をデーモンの WebSocket から購読して表示しているだけで、
-独自に既読状態を持たない（Desktop・モバイルアプリと常に同じ見え方になる）。
+既読・未読の状態はアプリ側では持たず、Paseo デーモンの状態をそのまま表示します。
+そのため Paseo Desktop やモバイルアプリと常に同じ見え方になります。
 
-接続手順は CLI（`@getpaseo/client`）と同じ:
+## 必要なもの
 
-1. `ws://127.0.0.1:6767/ws` に接続（ローカルはパスワード不要）
-2. 最初に `{"type":"hello","clientId":...,"clientType":"cli","protocolVersion":1,"capabilities":{...}}` を送る。
-   **`capabilities` に `all_providers: true` を含めないと、カスタムプロバイダの
-   エージェントが一覧から落ちる**（実測: running 中の 2 件が丸ごと消えた）。
-3. サーバから `status: server_info`（`serverId` 入り）が届いたら
-   `{"type":"session","message":{"type":"fetch_agents_request", "subscribe":{"subscriptionId":...}}}`
-   で一覧と購読を開始。以降のリクエストはすべて `{"type":"session","message":{...}}` で包む
-   （素で送ると `invalid_message`）。
-4. 以後 `agent_update`（`kind: upsert | remove`）と `agent_attention_required` が流れてくる。
+- macOS 14 以上
+- Paseo（デーモンがこの Mac で動いていること）
+- Xcode 26 以上（Swift 6 ツールチェーン）。ソースからビルドします。
 
-分類は デーモンの `deriveAgentStateBucket` と同じ順序:
-`pendingPermissions > 0 || reason=permission → 入力待ち` → `status=error → エラー` →
-`status=running → 実行中` → `requiresAttention → 完了・確認待ち` → それ以外は確認済み。
+外部の依存パッケージはありません。
 
-プロトコルの参照元は `/Applications/Paseo.app/Contents/Resources/app.asar` 内の
-`node_modules/@getpaseo/protocol/dist/messages.js`（`pnpm dlx @electron/asar extract` で展開できる）。
-
-## ビルド・インストール
+## インストール
 
 ```sh
-make build      # swift build -c release
-make run        # 直接起動（開発用。ログイン時起動は .app でないと設定できない）
-make install    # dist/PaseoAttentionBar.app を組み立てて /Applications へ配置し、LaunchAgent で起動
-make uninstall
+git clone https://github.com/knagato/paseo-attention-bar.git
+cd paseo-attention-bar
+make install
 ```
 
-Xcode 26 / Swift 6（strict concurrency）、macOS 14 以上。依存パッケージなし。
+`make install` で次のことを行います。
 
-## ログイン時に起動（LaunchAgent）
+1. `.app` を組み立てる
+2. `/Applications/PaseoAttentionBar.app` に配置する
+3. LaunchAgent を登録して起動する
 
-右クリックメニューの「ログイン時に起動」は `SMAppService.mainApp` を使うが、この .app は
-**ad-hoc 署名**（`codesign --sign -`）なので BTM への登録が残らず、再起動しても起動しなかった
-（実測 2026-09-23: `sfltool dumpbtm` にエントリ無し）。`make install` のたびに cdhash が変わるのも効く。
+次回以降のログイン時も自動で起動します。更新するときは、`git pull` してからもう一度 `make install` を実行してください。
 
-代わりに LaunchAgent で起動する。こちらは BTM に `legacy agent` として残り、再ビルドの影響も受けない。
-`make install` が plist の配置と登録までやるので、手で操作する必要はない。状態は次で確認できる:
+LaunchAgent の設定は次のとおりです。
+
+- アプリが異常終了したときだけ自動で再起動します。メニューから「終了」した場合は、次のログインまで起動しません。
+- ログは `/tmp/paseo-attention-bar.log` に出ます。
+- Paseo デーモンより先に起動しても、デーモンが上がりしだい自動で接続します（再接続の間隔は最大 30 秒）。
+
+> [!IMPORTANT]
+> 右クリックメニューの「ログイン時に起動」は**オンにしないでください**。
+> 自動起動は LaunchAgent が担当します。ビルドの署名が ad-hoc なので、このトグル（`SMAppService`）では
+> 再起動後に起動しないことがあります。また、両方を有効にすると二重に管理することになります。
+
+## アンインストール
 
 ```sh
-launchctl print gui/$(id -u)/com.knagato.paseo-attention-bar | grep -E 'state|pid'
+make uninstall-loginitem   # LaunchAgent を停止・削除
+make uninstall             # /Applications からアプリを削除
+defaults delete com.knagato.PaseoAttentionBar   # 設定も消す場合
 ```
 
-- plist: `Resources/com.knagato.paseo-attention-bar.plist` を `~/Library/LaunchAgents/` へコピーして使う
-  （`RunAtLoad` + `KeepAlive: SuccessfulExit=false` = クラッシュ時だけ再起動。メニューから終了したら上がってこない）
-- ログ: `/tmp/paseo-attention-bar.log`
-- デーモン（`ws://127.0.0.1:6767`）より先に上がっても、指数バックオフ（最大30秒）で再接続するので問題ない
-- `make install` は bootout → 差し替え → plist 配置 → bootstrap まで面倒を見る（`make uninstall-loginitem` で LaunchAgent ごと外す）
-- **この方式にした以上、アプリ内の「ログイン時に起動」トグルは使わない**（二重管理になる）
+## 設定
 
-## 注意: メニューバーが満杯だと見えない
+### 接続先
 
-新しいステータス項目は一番左（アプリメニューの直後）に入る。メニューバーが既に埋まっていると
-アプリメニューの下に押し出されて描画されない（ノッチ機で起きやすい。Say No to Notch 等で
-ノッチ無し解像度にしていても、幅が足りなければ同じ）。
+既定の接続先は `127.0.0.1:6767` です。Paseo の既定値と同じなので、通常は変更不要です。
+デーモンの待ち受けアドレスを変えている場合は、右クリック →「接続先を変更…」で
+`~/.paseo/config.json` の `daemon.listen` と同じ値（`host:port`）を入力してください。
 
-- ⌘ を押しながら他の項目を左右にドラッグして場所を空けるか、この項目を右へ寄せる
-  （位置は `autosaveName` で保存されるので再起動しても維持される）
-- 項目が存在するかは次で確認できる:
+> [!NOTE]
+> パスワード認証が必要な接続先には対応していません。
+
+## トラブルシューティング
+
+### メニューバーにアイコンが出ない
+
+新しいメニューバー項目は、並びの一番左（アプリのメニューのすぐ右）に追加されます。
+メニューバーが埋まっていると押し出されて表示されません。ノッチのある Mac で特に起きやすい症状です。
+
+- 他の項目を減らすか、⌘ を押しながら項目をドラッグして場所を空けてください。
+  並べ替えた位置は、再起動後も維持されます。
+- アプリが動いていて項目自体は存在するかどうかは、次のコマンドで確認できます。
   ```sh
   osascript -e 'tell application "System Events" to tell process "PaseoAttentionBar" to get {position, title} of every menu bar item of menu bar 1'
   ```
 
-## 構成
+### `—` のまま接続されない
+
+- Paseo デーモンが起動しているか確認してください。
+- 接続先が `~/.paseo/config.json` の `daemon.listen` と一致しているか確認してください。
+- 右クリック →「再接続」を試してください。
+- 常駐状態は次のコマンドで確認できます。
+  ```sh
+  launchctl print gui/$(id -u)/com.knagato.paseo-attention-bar | grep -E 'state|pid'
+  ```
+
+## しくみ
+
+Paseo デーモンには「要確認（attention）」の状態がもともと組み込まれています。
+
+- エージェントが 1 ターンを終えると、`requiresAttention: true` と
+  `attentionReason: "finished"` が付きます。
+- Desktop でそのエージェントを開くと、この状態はクリアされます。
+
+このアプリは、その状態をデーモンの WebSocket で購読して表示しているだけです。
+
+接続手順は Paseo の CLI（`@getpaseo/client`）と同じです。
+
+1. `ws://127.0.0.1:6767/ws` に接続します（ローカル接続では認証不要）。
+2. `{"type":"hello","clientId":...,"clientType":"cli","protocolVersion":1,"capabilities":{...}}` を送ります。
+   `capabilities` に `all_providers: true` を含めないと、カスタムプロバイダのエージェントが一覧から漏れます。
+3. `status: server_info` が届いたら、`fetch_agents_request` で一覧を取得し、購読を始めます。
+   このリクエストを含め、以降のリクエストはすべて `{"type":"session","message":{...}}` で包みます。
+4. 以降は `agent_update`（`upsert` / `remove`）と `agent_attention_required` を受け取って、一覧を更新します。
+
+各エージェントは、デーモンと同じ優先順位で分類します。上から順に判定し、最初に当てはまったものになります。
+
+1. 権限確認が保留中 → 入力待ち（`?`）
+2. `status` が `error` → エラー（`!`）
+3. `status` が `running` → 実行中（`▶`）
+4. `requiresAttention` が立っている → 完了・確認待ち（`✓`）
+5. どれにも当てはまらない → 確認済み（表示しない）
+
+## 開発
+
+```sh
+make build   # swift build -c release
+make run     # .app にせず直接起動（ログイン時起動の設定は無効）
+make bundle  # dist/PaseoAttentionBar.app を組み立てるだけ
+make clean
+```
 
 ```
 Sources/PaseoAttentionBar/
   main.swift / AppDelegate.swift
-  Model/AgentSummary.swift       # スナップショット → 表示用モデル、bucket 分類
+  Model/AgentSummary.swift       # スナップショット → 表示用モデル、分類
   Core/PaseoClient.swift         # WebSocket 接続・hello・購読・再接続・既読・deep link
   Core/Preferences.swift         # UserDefaults（接続先、▶表示、clientId）
   Core/LoginItem.swift           # SMAppService
-  UI/StatusItemController.swift  # NSStatusItem のタイトル生成・右クリックメニュー
+  UI/StatusItemController.swift  # メニューバー項目のタイトル・右クリックメニュー
   UI/PopoverView.swift           # 一覧ポップオーバー（SwiftUI）
   UI/Formatting.swift
 Resources/
   Info.plist
   com.knagato.paseo-attention-bar.plist  # LaunchAgent（make install が ~/Library/LaunchAgents へ配置）
+scripts/bundle.sh                # .app の組み立てと ad-hoc 署名
 ```
 
 ## ライセンス
