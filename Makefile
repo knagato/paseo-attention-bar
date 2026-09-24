@@ -1,4 +1,4 @@
-.PHONY: build run bundle install uninstall clean
+.PHONY: build run bundle install uninstall uninstall-loginitem clean
 
 build:
 	swift build -c release
@@ -11,14 +11,23 @@ run:
 bundle:
 	./scripts/bundle.sh
 
-# /Applications へ配置して起動する
+# /Applications へ配置して起動する。
+# 常駐は LaunchAgent(com.knagato.paseo-attention-bar) が持っているので、
+# pkill せず launchctl で止めて→入れ替え→kickstart する（pkill だと KeepAlive が
+# 差し替え途中のバンドルを掴んで上げ直してしまう）。
 install: bundle
+	-launchctl bootout gui/$(shell id -u)/com.knagato.paseo-attention-bar 2>/dev/null || true
 	-pkill -x PaseoAttentionBar || true
 	rm -rf /Applications/PaseoAttentionBar.app
 	cp -R dist/PaseoAttentionBar.app /Applications/
-	open /Applications/PaseoAttentionBar.app
+	launchctl bootstrap gui/$(shell id -u) $(HOME)/Library/LaunchAgents/com.knagato.paseo-attention-bar.plist
+
+uninstall-loginitem:
+	-launchctl bootout gui/$(shell id -u)/com.knagato.paseo-attention-bar 2>/dev/null || true
+	rm -f $(HOME)/Library/LaunchAgents/com.knagato.paseo-attention-bar.plist
 
 uninstall:
+	-launchctl bootout gui/$(shell id -u)/com.knagato.paseo-attention-bar 2>/dev/null || true
 	-pkill -x PaseoAttentionBar || true
 	rm -rf /Applications/PaseoAttentionBar.app
 
