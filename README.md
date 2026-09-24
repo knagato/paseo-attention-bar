@@ -106,3 +106,7 @@ Resources/
   Info.plist
   com.knagato.paseo-attention-bar.plist  # LaunchAgent（make install が ~/Library/LaunchAgents へ配置）
 ```
+
+## ライセンス
+
+[MIT](LICENSE)
