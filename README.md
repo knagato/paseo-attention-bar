@@ -42,13 +42,35 @@ Paseo Desktop で直接開けます。
 
 ## 必要なもの
 
-- macOS 14 以上
+- macOS 14 以上（Apple Silicon / Intel）
 - Paseo（デーモンがこの Mac で動いていること）
-- Xcode 26 以上（Swift 6 ツールチェーン）。ソースからビルドします。
-
-外部の依存パッケージはありません。
 
 ## インストール
+
+### ダウンロードする（おすすめ）
+
+1. [Releases](https://github.com/knagato/paseo-attention-bar/releases/latest) から
+   `PaseoAttentionBar-<バージョン>.zip` をダウンロードして展開します。
+2. `PaseoAttentionBar.app` を `/Applications` に移動します。
+3. LaunchAgent を登録します。登録するとすぐに起動し、次回以降のログイン時も自動で起動します。
+
+   ```sh
+   mkdir -p ~/Library/LaunchAgents
+   curl -fsSL https://raw.githubusercontent.com/knagato/paseo-attention-bar/main/Resources/com.knagato.paseo-attention-bar.plist \
+     -o ~/Library/LaunchAgents/com.knagato.paseo-attention-bar.plist
+   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.knagato.paseo-attention-bar.plist
+   ```
+
+   自動起動が不要なら、この手順は飛ばして `.app` をダブルクリックで起動してください。
+
+アプリは Developer ID で署名し、Apple の公証を受けています。そのため、警告なしで起動できます。
+
+更新するときは、アプリを終了してから、新しい `.app` で `/Applications` のものを置き換えてください。
+LaunchAgent を登録している場合は、`launchctl kickstart gui/$(id -u)/com.knagato.paseo-attention-bar` で起動し直せます。
+
+### ソースからビルドする
+
+Xcode 26 以上（Swift 6 ツールチェーン）が必要です。外部の依存パッケージはありません。
 
 ```sh
 git clone https://github.com/knagato/paseo-attention-bar.git
@@ -62,9 +84,11 @@ make install
 2. `/Applications/PaseoAttentionBar.app` に配置する
 3. LaunchAgent を登録して起動する
 
-次回以降のログイン時も自動で起動します。更新するときは、`git pull` してからもう一度 `make install` を実行してください。
+更新するときは、`git pull` してからもう一度 `make install` を実行してください。
 
-LaunchAgent の設定は次のとおりです。
+### LaunchAgent の動き
+
+どちらの方法でも、LaunchAgent の設定は次のとおりです。
 
 - アプリが異常終了したときだけ自動で再起動します。メニューから「終了」した場合は、次のログインまで起動しません。
 - ログは `/tmp/paseo-attention-bar.log` に出ます。
@@ -72,16 +96,19 @@ LaunchAgent の設定は次のとおりです。
 
 > [!IMPORTANT]
 > 右クリックメニューの「ログイン時に起動」は**オンにしないでください**。
-> 自動起動は LaunchAgent が担当します。ビルドの署名が ad-hoc なので、このトグル（`SMAppService`）では
-> 再起動後に起動しないことがあります。また、両方を有効にすると二重に管理することになります。
+> 自動起動は LaunchAgent が担当します。このトグル（`SMAppService`）は、ソースからビルドした
+> ad-hoc 署名のアプリでは再起動後に起動しないことがあります。また、両方を有効にすると二重に管理することになります。
 
 ## アンインストール
 
 ```sh
-make uninstall-loginitem   # LaunchAgent を停止・削除
-make uninstall             # /Applications からアプリを削除
+launchctl bootout gui/$(id -u)/com.knagato.paseo-attention-bar   # LaunchAgent を停止
+rm -f ~/Library/LaunchAgents/com.knagato.paseo-attention-bar.plist
+rm -rf /Applications/PaseoAttentionBar.app
 defaults delete com.knagato.PaseoAttentionBar   # 設定も消す場合
 ```
+
+ソースからビルドした場合は、`make uninstall-loginitem uninstall` でも同じことができます（設定は残ります）。
 
 ## 設定
 
@@ -150,7 +177,8 @@ Paseo デーモンには「要確認（attention）」の状態がもともと�
 ```sh
 make build   # swift build -c release
 make run     # .app にせず直接起動（ログイン時起動の設定は無効）
-make bundle  # dist/PaseoAttentionBar.app を組み立てるだけ
+make bundle  # dist/PaseoAttentionBar.app を組み立てるだけ（ad-hoc 署名）
+make release # 配布用 zip を作る（下記）
 make clean
 ```
 
@@ -167,8 +195,29 @@ Sources/PaseoAttentionBar/
 Resources/
   Info.plist
   com.knagato.paseo-attention-bar.plist  # LaunchAgent（make install が ~/Library/LaunchAgents へ配置）
-scripts/bundle.sh                # .app の組み立てと ad-hoc 署名
+scripts/bundle.sh                # .app の組み立てと署名
+scripts/release.sh               # ユニバーサルビルド・Developer ID 署名・公証・zip 化
 ```
+
+### リリースの作り方
+
+`make release` を実行すると、次の処理を順に行い、`dist/PaseoAttentionBar-<バージョン>.zip` を作ります。
+
+1. arm64 と x86_64 のユニバーサルバイナリでビルドする
+2. Developer ID で署名する（Hardened Runtime を付ける）
+3. `notarytool` で公証する
+4. `stapler` で公証結果をアプリに添付する
+
+バージョンは `Resources/Info.plist` の `CFBundleShortVersionString` から取ります。
+
+事前に、キーチェーンに Developer ID Application の証明書を入れておき、公証用の認証情報も登録しておく必要があります。
+認証情報の登録は 1 度だけで済みます。
+
+```sh
+xcrun notarytool store-credentials paseo-notary --apple-id <Apple ID> --team-id <Team ID>
+```
+
+署名 ID や profile 名は、環境変数 `SIGN_IDENTITY` / `NOTARY_PROFILE` で変えられます。
 
 ## ライセンス
 

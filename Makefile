@@ -1,4 +1,4 @@
-.PHONY: build run bundle install uninstall uninstall-loginitem clean
+.PHONY: build run bundle release install uninstall uninstall-loginitem clean
 
 build:
 	swift build -c release
@@ -10,6 +10,10 @@ run:
 # dist/PaseoAttentionBar.app を作る
 bundle:
 	./scripts/bundle.sh
+
+# 配布用: ユニバーサルビルド → Developer ID 署名 → 公証 → dist/PaseoAttentionBar-<version>.zip
+release:
+	./scripts/release.sh
 
 # /Applications へ配置して起動する。
 # 常駐は LaunchAgent(com.knagato.paseo-attention-bar) が持っているので、
