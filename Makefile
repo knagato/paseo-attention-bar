@@ -13,13 +13,15 @@ bundle:
 
 # /Applications へ配置して起動する。
 # 常駐は LaunchAgent(com.knagato.paseo-attention-bar) が持っているので、
-# pkill せず launchctl で止めて→入れ替え→kickstart する（pkill だと KeepAlive が
-# 差し替え途中のバンドルを掴んで上げ直してしまう）。
+# pkill せず launchctl で止めて→入れ替え→bootstrap する（pkill だと KeepAlive が
+# 差し替え途中のバンドルを掴んで上げ直してしまう）。plist は Resources/ から毎回配置する。
 install: bundle
 	-launchctl bootout gui/$(shell id -u)/com.knagato.paseo-attention-bar 2>/dev/null || true
 	-pkill -x PaseoAttentionBar || true
 	rm -rf /Applications/PaseoAttentionBar.app
 	cp -R dist/PaseoAttentionBar.app /Applications/
+	mkdir -p $(HOME)/Library/LaunchAgents
+	cp Resources/com.knagato.paseo-attention-bar.plist $(HOME)/Library/LaunchAgents/
 	launchctl bootstrap gui/$(shell id -u) $(HOME)/Library/LaunchAgents/com.knagato.paseo-attention-bar.plist
 
 uninstall-loginitem:

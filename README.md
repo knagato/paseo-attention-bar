@@ -51,7 +51,7 @@ Paseo デーモンには「要確認（attention）」の概念が組み込ま�
 ```sh
 make build      # swift build -c release
 make run        # 直接起動（開発用。ログイン時起動は .app でないと設定できない）
-make install    # dist/PaseoAttentionBar.app を組み立てて /Applications へ配置・起動
+make install    # dist/PaseoAttentionBar.app を組み立てて /Applications へ配置し、LaunchAgent で起動
 make uninstall
 ```
 
@@ -64,17 +64,17 @@ Xcode 26 / Swift 6（strict concurrency）、macOS 14 以上。依存パッケ�
 （実測 2026-09-23: `sfltool dumpbtm` にエントリ無し）。`make install` のたびに cdhash が変わるのも効く。
 
 代わりに LaunchAgent で起動する。こちらは BTM に `legacy agent` として残り、再ビルドの影響も受けない。
+`make install` が plist の配置と登録までやるので、手で操作する必要はない。状態は次で確認できる:
 
 ```sh
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.knagato.paseo-attention-bar.plist
 launchctl print gui/$(id -u)/com.knagato.paseo-attention-bar | grep -E 'state|pid'
 ```
 
-- plist: `~/Library/LaunchAgents/com.knagato.paseo-attention-bar.plist`
+- plist: `Resources/com.knagato.paseo-attention-bar.plist` を `~/Library/LaunchAgents/` へコピーして使う
   （`RunAtLoad` + `KeepAlive: SuccessfulExit=false` = クラッシュ時だけ再起動。メニューから終了したら上がってこない）
 - ログ: `/tmp/paseo-attention-bar.log`
 - デーモン（`ws://127.0.0.1:6767`）より先に上がっても、指数バックオフ（最大30秒）で再接続するので問題ない
-- `make install` は bootout → 差し替え → bootstrap まで面倒を見る（`make uninstall-loginitem` で LaunchAgent ごと外す）
+- `make install` は bootout → 差し替え → plist 配置 → bootstrap まで面倒を見る（`make uninstall-loginitem` で LaunchAgent ごと外す）
 - **この方式にした以上、アプリ内の「ログイン時に起動」トグルは使わない**（二重管理になる）
 
 ## 注意: メニューバーが満杯だと見えない
@@ -102,4 +102,7 @@ Sources/PaseoAttentionBar/
   UI/StatusItemController.swift  # NSStatusItem のタイトル生成・右クリックメニュー
   UI/PopoverView.swift           # 一覧ポップオーバー（SwiftUI）
   UI/Formatting.swift
+Resources/
+  Info.plist
+  com.knagato.paseo-attention-bar.plist  # LaunchAgent（make install が ~/Library/LaunchAgents へ配置）
 ```
