@@ -58,9 +58,9 @@ Paseo Desktop で直接開けます。
 
    ```sh
    mkdir -p ~/Library/LaunchAgents
-   curl -fsSL https://raw.githubusercontent.com/knagato/paseo-attention-bar/main/Resources/com.knagato.paseo-attention-bar.plist \
-     -o ~/Library/LaunchAgents/com.knagato.paseo-attention-bar.plist
-   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.knagato.paseo-attention-bar.plist
+   curl -fsSL https://raw.githubusercontent.com/knagato/paseo-attention-bar/main/Resources/com.knatrix.paseo-attention-bar.plist \
+     -o ~/Library/LaunchAgents/com.knatrix.paseo-attention-bar.plist
+   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.knatrix.paseo-attention-bar.plist
    ```
 
    自動起動が不要なら、この手順は飛ばして `.app` をダブルクリックで起動してください。
@@ -68,7 +68,21 @@ Paseo Desktop で直接開けます。
 アプリは Developer ID で署名し、Apple の公証を受けています。そのため、警告なしで起動できます。
 
 更新するときは、アプリを終了してから、新しい `.app` で `/Applications` のものを置き換えてください。
-LaunchAgent を登録している場合は、`launchctl kickstart gui/$(id -u)/com.knagato.paseo-attention-bar` で起動し直せます。
+LaunchAgent を登録している場合は、`launchctl kickstart gui/$(id -u)/com.knatrix.paseo-attention-bar` で起動し直せます。
+
+#### 0.1.0 から更新する場合
+
+バンドル ID を `com.knagato.PaseoAttentionBar` から `com.knatrix.PaseoAttentionBar` に変え、LaunchAgent の
+ラベルも合わせて変えました。設定は初回起動時に自動で引き継ぎます。古い LaunchAgent は手で外してください
+（`make install` なら自動で外します）。
+
+```sh
+launchctl bootout gui/$(id -u)/com.knagato.paseo-attention-bar
+rm -f ~/Library/LaunchAgents/com.knagato.paseo-attention-bar.plist
+```
+
+そのあと、上の手順 3 で新しい LaunchAgent を登録してください。「ログイン時に起動」をオンにしていた場合は、
+オンにし直してください。引き継ぎが済んだら、`defaults delete com.knagato.PaseoAttentionBar` で古い設定を消せます。
 
 ### ソースからビルドする
 
@@ -104,10 +118,10 @@ make install
 ## アンインストール
 
 ```sh
-launchctl bootout gui/$(id -u)/com.knagato.paseo-attention-bar   # LaunchAgent を停止
-rm -f ~/Library/LaunchAgents/com.knagato.paseo-attention-bar.plist
+launchctl bootout gui/$(id -u)/com.knatrix.paseo-attention-bar   # LaunchAgent を停止
+rm -f ~/Library/LaunchAgents/com.knatrix.paseo-attention-bar.plist
 rm -rf /Applications/PaseoAttentionBar.app
-defaults delete com.knagato.PaseoAttentionBar   # 設定も消す場合
+defaults delete com.knatrix.PaseoAttentionBar   # 設定も消す場合
 ```
 
 ソースからビルドした場合は、`make uninstall-loginitem uninstall` でも同じことができます（設定は残ります）。
@@ -144,7 +158,7 @@ defaults delete com.knagato.PaseoAttentionBar   # 設定も消す場合
 - 右クリック →「再接続」を試してください。
 - 常駐状態は次のコマンドで確認できます。
   ```sh
-  launchctl print gui/$(id -u)/com.knagato.paseo-attention-bar | grep -E 'state|pid'
+  launchctl print gui/$(id -u)/com.knatrix.paseo-attention-bar | grep -E 'state|pid'
   ```
 
 ## しくみ
@@ -196,7 +210,7 @@ Sources/PaseoAttentionBar/
   UI/Formatting.swift
 Resources/
   Info.plist
-  com.knagato.paseo-attention-bar.plist  # LaunchAgent（make install が ~/Library/LaunchAgents へ配置）
+  com.knatrix.paseo-attention-bar.plist  # LaunchAgent（make install が ~/Library/LaunchAgents へ配置）
 scripts/bundle.sh                # .app の組み立てと署名
 scripts/release.sh               # ユニバーサルビルド・Developer ID 署名・公証・zip 化
 ```

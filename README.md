@@ -58,9 +58,9 @@ so it always matches what you see in Paseo Desktop and the mobile app.
 
    ```sh
    mkdir -p ~/Library/LaunchAgents
-   curl -fsSL https://raw.githubusercontent.com/knagato/paseo-attention-bar/main/Resources/com.knagato.paseo-attention-bar.plist \
-     -o ~/Library/LaunchAgents/com.knagato.paseo-attention-bar.plist
-   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.knagato.paseo-attention-bar.plist
+   curl -fsSL https://raw.githubusercontent.com/knagato/paseo-attention-bar/main/Resources/com.knatrix.paseo-attention-bar.plist \
+     -o ~/Library/LaunchAgents/com.knatrix.paseo-attention-bar.plist
+   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.knatrix.paseo-attention-bar.plist
    ```
 
    If you don't want it to start at login, skip this step and just double-click the `.app`.
@@ -69,7 +69,21 @@ The app is signed with a Developer ID and notarized by Apple, so it opens withou
 
 To update, quit the app and replace the `.app` in `/Applications` with the new one.
 If you registered the LaunchAgent, you can restart it with
-`launchctl kickstart gui/$(id -u)/com.knagato.paseo-attention-bar`.
+`launchctl kickstart gui/$(id -u)/com.knatrix.paseo-attention-bar`.
+
+#### Upgrading from 0.1.0
+
+The bundle ID changed from `com.knagato.PaseoAttentionBar` to `com.knatrix.PaseoAttentionBar`, and the
+LaunchAgent label changed with it. Settings are carried over automatically on first launch. The old LaunchAgent
+has to be removed by hand (`make install` does this for you):
+
+```sh
+launchctl bootout gui/$(id -u)/com.knagato.paseo-attention-bar
+rm -f ~/Library/LaunchAgents/com.knagato.paseo-attention-bar.plist
+```
+
+Then register the new LaunchAgent as in step 3 above. If you had turned on "Launch at login", turn it on again.
+Afterwards you can remove the old settings with `defaults delete com.knagato.PaseoAttentionBar`.
 
 ### Build from source
 
@@ -106,10 +120,10 @@ Both installation methods use the same LaunchAgent settings:
 ## Uninstall
 
 ```sh
-launchctl bootout gui/$(id -u)/com.knagato.paseo-attention-bar   # stop the LaunchAgent
-rm -f ~/Library/LaunchAgents/com.knagato.paseo-attention-bar.plist
+launchctl bootout gui/$(id -u)/com.knatrix.paseo-attention-bar   # stop the LaunchAgent
+rm -f ~/Library/LaunchAgents/com.knatrix.paseo-attention-bar.plist
 rm -rf /Applications/PaseoAttentionBar.app
-defaults delete com.knagato.PaseoAttentionBar   # also remove settings
+defaults delete com.knatrix.PaseoAttentionBar   # also remove settings
 ```
 
 If you built from source, `make uninstall-loginitem uninstall` does the same (except that it keeps your settings).
@@ -146,7 +160,7 @@ When the menu bar is full, they get pushed out and aren't shown. This happens mo
 - Try right-click → "Reconnect" (「再接続」).
 - To check whether the LaunchAgent is running, run:
   ```sh
-  launchctl print gui/$(id -u)/com.knagato.paseo-attention-bar | grep -E 'state|pid'
+  launchctl print gui/$(id -u)/com.knatrix.paseo-attention-bar | grep -E 'state|pid'
   ```
 
 ## How it works
@@ -198,7 +212,7 @@ Sources/PaseoAttentionBar/
   UI/Formatting.swift
 Resources/
   Info.plist
-  com.knagato.paseo-attention-bar.plist  # LaunchAgent (make install copies it to ~/Library/LaunchAgents)
+  com.knatrix.paseo-attention-bar.plist  # LaunchAgent (make install copies it to ~/Library/LaunchAgents)
 scripts/bundle.sh                # assemble and sign the .app
 scripts/release.sh               # universal build, Developer ID signing, notarization, zip
 ```

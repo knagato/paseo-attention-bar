@@ -38,7 +38,7 @@ cp "$BIN_PATH" "$APP_DIR/Contents/MacOS/$APP_NAME"
 cp "$ROOT/Resources/Info.plist" "$APP_DIR/Contents/Info.plist"
 printf 'APPL????' > "$APP_DIR/Contents/PkgInfo"
 
-SIGN_ARGS=(--force --sign "$SIGN_IDENTITY" --identifier com.knagato.PaseoAttentionBar)
+SIGN_ARGS=(--force --sign "$SIGN_IDENTITY" --identifier com.knatrix.PaseoAttentionBar)
 if [[ "$SIGN_IDENTITY" == "-" ]]; then
   echo "==> code signing (ad-hoc)"
 else

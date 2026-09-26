@@ -25,7 +25,21 @@ final class Preferences: ObservableObject {
     /// デーモンへの hello で名乗る clientId。初回に生成して固定する。
     let clientId: String
 
+    /// 0.1.0 までのバンドル ID。UserDefaults はバンドル ID ごとの領域に入るので、
+    /// ID を変えた後の初回起動で旧領域の設定（clientId、メニューバー上の位置など）を引き継ぐ。
+    private static let legacyDomain = "com.knagato.PaseoAttentionBar"
+
+    private static func migrateLegacyDefaults(into defaults: UserDefaults) {
+        guard Bundle.main.bundleIdentifier != legacyDomain,
+              defaults.string(forKey: Key.clientId) == nil,
+              let legacy = defaults.persistentDomain(forName: legacyDomain) else { return }
+        for (key, value) in legacy where defaults.object(forKey: key) == nil {
+            defaults.set(value, forKey: key)
+        }
+    }
+
     init() {
+        Self.migrateLegacyDefaults(into: defaults)
         daemonHost = defaults.string(forKey: Key.host) ?? "127.0.0.1:6767"
         showRunningCount = defaults.object(forKey: Key.showRunning) as? Bool ?? true
         if let existing = defaults.string(forKey: Key.clientId) {

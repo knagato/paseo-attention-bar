@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.knagato.paseo-attention-bar</string>
+    <string>com.knatrix.paseo-attention-bar</string>
     <key>ProgramArguments</key>
     <array>
         <string>/Applications/PaseoAttentionBar.app/Contents/MacOS/PaseoAttentionBar</string>
