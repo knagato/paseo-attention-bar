@@ -230,7 +230,7 @@ scripts/release.sh               # ユニバーサルビルド・Developer ID �
 認証情報の登録は 1 度だけで済みます。
 
 ```sh
-xcrun notarytool store-credentials paseo-notary --apple-id <Apple ID> --team-id <Team ID>
+xcrun notarytool store-credentials developer-id-notary --apple-id <Apple ID> --team-id <Team ID>
 ```
 
 署名 ID や profile 名は、環境変数 `SIGN_IDENTITY` / `NOTARY_PROFILE` で変えられます。

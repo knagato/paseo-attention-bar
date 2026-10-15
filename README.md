@@ -232,7 +232,7 @@ You need a Developer ID Application certificate in your keychain and notarizatio
 Registering the credentials is a one-time step:
 
 ```sh
-xcrun notarytool store-credentials paseo-notary --apple-id <Apple ID> --team-id <Team ID>
+xcrun notarytool store-credentials developer-id-notary --apple-id <Apple ID> --team-id <Team ID>
 ```
 
 You can override the signing identity and profile name with the `SIGN_IDENTITY` and `NOTARY_PROFILE` environment variables.
